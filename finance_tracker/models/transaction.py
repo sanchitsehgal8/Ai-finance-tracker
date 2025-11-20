@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
 
+from utils.formatters import format_currency
+
 
 class Transaction(ABC):
     """Abstract base class for all transactions.
@@ -52,7 +54,7 @@ class Income(Transaction):
     """Concrete Income class."""
 
     def get_summary(self) -> str:
-        return f"Income: ${self._amount:.2f} from {self._category} on {self._date.strftime('%Y-%m-%d')}"
+        return f"Income: {format_currency(self._amount)} from {self._category} on {self._date.strftime('%Y-%m-%d')}"
 
     def validate(self) -> bool:
         return self._amount > 0 and self._category is not None
@@ -62,7 +64,7 @@ class Expense(Transaction):
     """Concrete Expense class."""
 
     def get_summary(self) -> str:
-        return f"Expense: ${self._amount:.2f} for {self._category} on {self._date.strftime('%Y-%m-%d')}"
+        return f"Expense: {format_currency(self._amount)} for {self._category} on {self._date.strftime('%Y-%m-%d')}"
 
     def validate(self) -> bool:
         return self._amount > 0 and self._category is not None

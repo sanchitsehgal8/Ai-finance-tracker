@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from services.transaction_service import TransactionService
 from services.budget_service import BudgetService
+from utils.formatters import format_currency
 
 
 def render_dashboard():
@@ -19,15 +20,15 @@ def render_dashboard():
 
     with col1:
         total_income = sum([t['amount'] for t in transactions if t.get('transaction_type') == 'income'])
-        st.metric("Total Income", f"${total_income:,.2f}")
+        st.metric("Total Income", format_currency(total_income))
 
     with col2:
         total_expense = sum([t['amount'] for t in transactions if t.get('transaction_type') == 'expense'])
-        st.metric("Total Expenses", f"${total_expense:,.2f}")
+        st.metric("Total Expenses", format_currency(total_expense))
 
     with col3:
         net_savings = total_income - total_expense
-        st.metric("Net Savings", f"${net_savings:,.2f}")
+        st.metric("Net Savings", format_currency(net_savings))
 
     with col4:
         budget_status = budget_service.get_budget_status(user_id)
