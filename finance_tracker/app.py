@@ -4,6 +4,7 @@ from ui.components.dashboard import render_dashboard
 from ui.components.transaction_form import render_transaction_form
 from ui.components.budget_form import render_budget_form
 from ui.components.reports_view import render_reports
+from ui.components.group_expenses import render_group_panel
 from services.authentication_service import AuthenticationService
 from ui.styles import load_custom_css
 
@@ -105,6 +106,9 @@ def main():
         render_budget_form()
     elif page == "Reports":
         render_reports()
+    elif page == "Groups":
+        user_id = st.session_state.get('user_id')
+        render_group_panel(user_id=user_id)
 
 
 if __name__ == '__main__':

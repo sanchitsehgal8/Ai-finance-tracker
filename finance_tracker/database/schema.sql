@@ -62,3 +62,43 @@ CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, d
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
 CREATE INDEX IF NOT EXISTS idx_budgets_user_month ON budgets(user_id, month);
 CREATE INDEX IF NOT EXISTS idx_alerts_user_read ON alerts(user_id, is_read);
+
+-- Splitwise-like group expense tables
+CREATE TABLE IF NOT EXISTS groups (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    owner_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    group_id UUID REFERENCES groups ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+    joined_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_expenses (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    group_id UUID REFERENCES groups ON DELETE CASCADE NOT NULL,
+    payer_id UUID REFERENCES auth.users ON DELETE SET NULL,
+    amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
+    description TEXT,
+    date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS group_expense_shares (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    expense_id UUID REFERENCES group_expenses ON DELETE CASCADE NOT NULL,
+    user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+    share_amount DECIMAL(12,2) NOT NULL CHECK (share_amount >= 0),
+    settled BOOLEAN DEFAULT FALSE,
+    UNIQUE(expense_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_expenses_group ON group_expenses(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_shares_expense ON group_expense_shares(expense_id);
