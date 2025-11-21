@@ -9,7 +9,7 @@ from services.authentication_service import AuthenticationService
 from ui.styles import load_custom_css
 
 st.set_page_config(
-    page_title="AI Finance Tracker",
+    page_title="Finance Tracker",
     page_icon="💰",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -40,18 +40,52 @@ def render_login_page(auth_service: AuthenticationService):
         try:
             result = auth_service.sign_in(email=email, password=password)
             st.write("Auth result (debug):", result)
-            # Try to extract user id from common supabase response shapes
-            user_id = None
-            if isinstance(result, dict):
-                # supabase-py v2 may return {'data': {...}, 'error': None}
-                if 'data' in result and isinstance(result.get('data'), dict):
-                    data = result.get('data')
-                    user = data.get('user') or data.get('session') or data
-                    if isinstance(user, dict):
-                        user_id = user.get('id') or user.get('user_id')
-                user_id = user_id or result.get('user', {}).get('id') or result.get('id') or result.get('user_id')
-            else:
-                user_id = getattr(result, 'user_id', None) or getattr(result, 'id', None)
+
+            def _extract_user_id(res):
+                # Try multiple known shapes: dicts with 'data'/'user'/'session',
+                # or objects with attributes like .user, .id
+                if not res:
+                    return None
+
+                # Helper to pull id from an object/dict
+                def _id_from(obj):
+                    try:
+                        if obj is None:
+                            return None
+                        if isinstance(obj, dict):
+                            return obj.get('id') or obj.get('user_id') or (obj.get('user') or {}).get('id')
+                        # object with attributes
+                        if hasattr(obj, 'id'):
+                            return getattr(obj, 'id')
+                        if hasattr(obj, 'user') and hasattr(obj.user, 'id'):
+                            return getattr(obj.user, 'id')
+                        if hasattr(obj, 'user') and isinstance(getattr(obj, 'user'), dict):
+                            return getattr(obj, 'user').get('id')
+                    except Exception:
+                        return None
+                    return None
+
+                # If dict-like wrapper
+                if isinstance(res, dict):
+                    # common supabase-py v2 shape: {'data': {...}, 'error': None}
+                    data = res.get('data') or res.get('session') or res
+                    # Try a few nested candidates
+                    for candidate in (data, res.get('user'), res.get('session')):
+                        uid = _id_from(candidate)
+                        if uid:
+                            return uid
+                    return _id_from(res)
+
+                # If object-like
+                # check .user, .session, direct .id
+                for attr in ('user', 'session'):
+                    candidate = getattr(res, attr, None)
+                    uid = _id_from(candidate)
+                    if uid:
+                        return uid
+                return _id_from(res)
+
+            user_id = _extract_user_id(result)
 
             if user_id:
                 st.session_state['authenticated'] = True
@@ -63,6 +97,7 @@ def render_login_page(auth_service: AuthenticationService):
                     st.info('Authentication successful — please refresh the page to continue.')
             else:
                 st.error("Sign-in failed or did not return a user id. Check logs and Supabase config.")
+                st.info("Tip: the Supabase auth response was received — check the debug output above for the exact shape. If you signed up recently, the auth user exists but you may still need to create a profile row in `user_profiles`.")
         except Exception as exc:
             st.error(f"Sign-in failed: {exc}")
             import logging
@@ -83,8 +118,19 @@ def render_login_page(auth_service: AuthenticationService):
     st.markdown("---")
     st.warning("Development only: use the bypass to skip authentication and explore the UI.")
     if st.button("Dev bypass: Continue as `dev-user`", key='dev_bypass'):
+        import os
+        import uuid
+
+        # Prefer an explicit DEV_USER_ID (set in .env) so local writes can reference a real Supabase user.
+        dev_id = os.getenv('DEV_USER_ID')
+        if not dev_id:
+            # Generate a UUID to satisfy validation. Note: generated id may not exist in `auth.users`,
+            # which can cause foreign-key errors on writes; set DEV_USER_ID to a real user id to avoid that.
+            dev_id = str(uuid.uuid4())
+            st.warning('DEV_USER_ID not set — using a generated UUID for dev session. DB writes may fail due to missing auth user.')
+
         st.session_state['authenticated'] = True
-        st.session_state['user_id'] = "dev-user"
+        st.session_state['user_id'] = dev_id
         try:
             st.experimental_rerun()
         except AttributeError:

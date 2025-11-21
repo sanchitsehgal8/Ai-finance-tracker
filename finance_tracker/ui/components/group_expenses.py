@@ -48,11 +48,18 @@ def render_group_panel(user_id: str):
                 shares.append({'user_id': u, 'share_amount': float(v)})
 
         if st.button("Save Expense"):
-            created = svc.add_expense(group_id=group_id, payer_id=payer, amount=amount, date_obj=dt, description=desc, shares=shares)
-            if created:
-                st.success("Expense added")
-            else:
-                st.error("Failed to add expense")
+            try:
+                created = svc.add_expense(group_id=group_id, payer_id=payer, amount=amount, date_obj=dt, description=desc, shares=shares)
+                if isinstance(created, dict) and created.get('error') == 'no_client':
+                    st.error(created.get('message'))
+                elif created:
+                    st.success("Expense added")
+                else:
+                    st.error("Failed to add expense — check logs for details")
+            except Exception as exc:
+                st.error(f"Error adding expense: {exc}")
+                import logging
+                logging.exception('Group expense save error')
 
     with st.expander("Group balances"):
         groups = svc.repo.list_groups_for_user(user_id)

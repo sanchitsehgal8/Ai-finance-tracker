@@ -35,8 +35,15 @@ def render_transaction_form():
             # If user didn't provide category, try classifier prediction on-the-fly
             final_category = category if category else None
             svc = TransactionService()
-            res = svc.add_transaction(user_id, float(amount), date.isoformat(), final_category, ttype, description)
-            if res:
-                st.success('Transaction saved')
-            else:
-                st.error('Failed to save transaction')
+            try:
+                res = svc.add_transaction(user_id, float(amount), date.isoformat(), final_category, ttype, description)
+                if isinstance(res, dict) and res.get('error'):
+                    st.error(res.get('message') or 'Failed to save transaction')
+                elif res:
+                    st.success('Transaction saved')
+                else:
+                    st.error('Failed to save transaction — check logs for details')
+            except Exception as exc:
+                st.error(f'Error saving transaction: {exc}')
+                import logging
+                logging.exception('Transaction save error')

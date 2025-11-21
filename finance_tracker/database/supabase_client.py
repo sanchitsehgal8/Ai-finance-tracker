@@ -4,16 +4,21 @@ from dotenv import load_dotenv
 
 
 load_dotenv()
-
-SUPABASE_URL = os.getenv("https://utxhqgsshmggvesmflca.supabase.co")
-SUPABASE_KEY = os.getenv("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0eGhxZ3NzaG1nZ3Zlc21mbGNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2NjgwMjYsImV4cCI6MjA3OTI0NDAyNn0.STXxVLcK_hR-5XrRvLpGVpTYE0NaB_T-6XiJWJofqVs")
+# Read correct environment variable names
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise Exception("Supabase credentials are missing in .env")
+    # Provide an actionable error message; do not print the key.
+    raise Exception(
+        "Supabase credentials are missing or malformed.\n"
+        "Please create a `.env` file (or set environment variables) with SUPABASE_URL and SUPABASE_KEY.\n"
+        "You can copy `.env.example` and fill in your values, then restart the app."
+    )
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 def get_supabase_client():
     return supabase
 
-print("URL:", os.getenv("SUPABASE_URL"))

@@ -1,7 +1,5 @@
 import streamlit as st
 from services.budget_service import BudgetService
-
-
 def render_budget_form():
     st.title("Budget Management")
     user_id = st.session_state.get('user_id')
@@ -15,8 +13,15 @@ def render_budget_form():
                 st.error('Category ID required')
             else:
                 svc = BudgetService()
-                res = svc.set_budget(user_id, category_id, float(monthly_limit), month.isoformat())
-                if res:
-                    st.success('Budget saved')
-                else:
-                    st.error('Failed to save budget')
+                try:
+                    res = svc.set_budget(user_id, category_id, float(monthly_limit), month.isoformat())
+                    if isinstance(res, dict) and res.get('error'):
+                        st.error(res.get('message') or 'Failed to save budget')
+                    elif res:
+                        st.success('Budget saved')
+                    else:
+                        st.error('Failed to save budget — check logs for details')
+                except Exception as exc:
+                    st.error(f'Error saving budget: {exc}')
+                    import logging
+                    logging.exception('Budget save error')

@@ -9,8 +9,13 @@ class BudgetRepository(BaseRepository):
         try:
             response = self.client.table('budgets').insert(budget_data).execute()
             return response.data[0] if response.data else None
-        except Exception:
-            return None
+        except Exception as exc:
+            # Return structured error so service/UI can show an informative message
+            try:
+                msg = str(exc)
+            except Exception:
+                msg = 'Unknown database error'
+            return {'error': True, 'message': msg}
 
     def get_by_user(self, user_id: str) -> List[Dict]:
         try:
