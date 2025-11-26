@@ -14,7 +14,15 @@ class GroupService:
         if hasattr(self.repo, 'client') and not getattr(self.repo, 'client'):
             return {"error": "no_client", "message": "Supabase client not configured. Set SUPABASE_URL and SUPABASE_KEY or enable dev bypass."}
         payload = {"owner_id": owner_id, "name": name, "description": description}
-        return self.repo.create_group(payload)
+        created_group = self.repo.create_group(payload)
+        
+        # Add the owner as a member of the group
+        if created_group:
+            group_id = created_group.get('id')
+            member_payload = {"group_id": group_id, "user_id": owner_id}
+            self.repo.add_member(member_payload)
+        
+        return created_group
 
     def add_member(self, group_id: str, user_id: str) -> Optional[Dict]:
         if hasattr(self.repo, 'client') and not getattr(self.repo, 'client'):
